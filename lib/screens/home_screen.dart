@@ -175,18 +175,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, color: AppColors.textTertiary),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Search Doctor',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DoctorListScreen(),
                         ),
-                      ),
-                    ],
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, color: AppColors.textTertiary),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Search Doctor',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -344,9 +354,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // My Recent Visit
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'My Recent Visit',
+                  children: [                    const Text(
+                      'Available Doctors',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -372,8 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                
-                FutureBuilder<List<Doctor>>(
+                  FutureBuilder<List<Doctor>>(
                   future: _doctorsFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -393,8 +401,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
                     
-                    // Get the first 2 doctors as recent visits (for demo purposes)
-                    final doctors = snapshot.data!.take(2).toList();
+                    // Show all available doctors
+                    final doctors = snapshot.data!;
                     
                     return Column(
                       children: doctors.map((doctor) {
@@ -433,19 +441,24 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Doctors',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.apartment_outlined),
-            label: 'Hospital',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             label: 'Profile',
           ),
         ],
-      ),
+        onTap: (index) {
+          if (index == 1) {
+            // Navigate to Doctors screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DoctorListScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            // Show profile options
+            _showProfileOptions(context);
+          }
+        },      ),
     );
   }
 

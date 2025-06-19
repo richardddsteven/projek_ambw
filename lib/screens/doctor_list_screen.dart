@@ -16,11 +16,33 @@ class DoctorListScreen extends StatefulWidget {
 
 class _DoctorListScreenState extends State<DoctorListScreen> {
   late Future<List<Doctor>> _doctorsFuture;
+  List<Doctor> _allDoctors = [];
+  List<Doctor> _filteredDoctors = [];
+  TextEditingController _searchController = TextEditingController();
   
   @override
   void initState() {
     super.initState();
     _doctorsFuture = _loadDoctors();
+    _searchController.addListener(_filterDoctors);
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+  
+  void _filterDoctors() {
+    if (_allDoctors.isEmpty) return;
+    
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredDoctors = _allDoctors.where((doctor) {
+        return doctor.name.toLowerCase().contains(query) || 
+               doctor.specialty.toLowerCase().contains(query);
+      }).toList();
+    });
   }
   
   Future<List<Doctor>> _loadDoctors() async {
@@ -29,10 +51,16 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           ? await SupabaseService.getDoctorsBySpecialty(widget.specialty!)
           : await SupabaseService.getDoctors();
           
-      return doctorsData.map((data) => Doctor.fromJson(data)).toList();
+      final doctors = doctorsData.map((data) => Doctor.fromJson(data)).toList();
+      
+      // Store all doctors for filtering
+      _allDoctors = doctors;
+      _filteredDoctors = doctors;
+      
+      return doctors;
     } catch (e) {
       // For testing, return dummy data if Supabase table isn't set up yet
-      return [
+      final dummyDoctors = [
         Doctor(
           id: '1',
           name: 'Jennifer Smith',
@@ -70,7 +98,19 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           rating: 4.7,
         ),
       ].where((doctor) => widget.specialty == null || doctor.specialty == widget.specialty).toList();
+      
+      // Store dummy doctors for filtering
+      _allDoctors = dummyDoctors;
+      _filteredDoctors = dummyDoctors;
+      
+      return dummyDoctors;
     }
+  }
+  
+  Future<void> _refreshDoctors() async {
+    setState(() {
+      _doctorsFuture = _loadDoctors();
+    });
   }
   
   @override
@@ -90,7 +130,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -102,18 +142,14 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search, color: AppColors.textTertiary),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Search Doctor',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  icon: Icon(Icons.search, color: AppColors.textTertiary),
+                  hintText: 'Search Doctor',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  border: InputBorder.none,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -124,50 +160,65 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: FutureBuilder<List<Doctor>>(
-                future: _doctorsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(
-                      child: Text('Error: ${snapshot.error}'),
-                    );
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text('No doctors available'),
-                    );
-                  }
-                  
-                  final doctors = snapshot.data!;
-                  
-                  return ListView.builder(
-                    itemCount: doctors.length,
-                    itemBuilder: (context, index) {
-                      return DoctorCard(
-                        doctor: doctors[index],
-                        isSmall: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DoctorDetailScreen(
-                                doctor: doctors[index],
-                              ),
-                            ),
-                          );
-                        },
+            const SizedBox(height: 16),            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _refreshDoctors,
+                child: FutureBuilder<List<Doctor>>(
+                  future: _doctorsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(
+                        child: Text('Error: ${snapshot.error}'),
                       );
-                    },
-                  );
-                },
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(
+                        child: Text('No doctors available'),
+                      );
+                    }
+                    
+                    return _searchController.text.isEmpty
+                      ? _buildDoctorsList(_allDoctors)
+                      : _buildDoctorsList(_filteredDoctors);
+                  },
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+  
+  Widget _buildDoctorsList(List<Doctor> doctors) {
+    if (doctors.isEmpty) {
+      return const Center(
+        child: Text('No doctors found matching your search'),
+      );
+    }
+    
+    return ListView.builder(
+      itemCount: doctors.length,
+      itemBuilder: (context, index) {
+        return DoctorCard(
+          doctor: doctors[index],
+          isSmall: true,
+          onTap: () {            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DoctorDetailScreen(
+                  doctor: doctors[index],
+                ),
+              ),
+            ).then((_) {
+              // This will be called when returning from DoctorDetailScreen
+              // We can use it to refresh the list if needed
+              setState(() {});
+            });
+          },
+        );
+      },
     );
   }
 }

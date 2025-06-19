@@ -70,10 +70,11 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.8),
                 shape: BoxShape.circle,
-              ),
-              child: IconButton(
+              ),              child: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
               ),
             ),
           ),
@@ -335,8 +336,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             title: const Text('Success'),
             content: Text(
               'Your appointment with Dr. ${widget.doctor.name} has been booked for ${DateFormat('EEEE, MMM d').format(_selectedDate)} at ${_selectedTime!.format(context)}.',
-            ),
-            actions: [
+            ),            actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // Close dialog

@@ -19,6 +19,14 @@ class SupabaseService {
     return response;
   }
   
+  static Future<List<Map<String, dynamic>>> searchDoctors(String query) async {
+    final response = await _client
+        .from('doctors')
+        .select()
+        .or('name.ilike.%$query%,specialty.ilike.%$query%');
+    return response;
+  }
+  
   // Appointment methods
   static Future<List<Map<String, dynamic>>> getUserAppointments(String userId) async {
     final response = await _client
