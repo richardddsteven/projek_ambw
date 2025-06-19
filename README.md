@@ -28,12 +28,38 @@ The app is designed with a clean and modern UI similar to the shared design mock
 2. Run `flutter pub get` to install dependencies
 3. Set up Supabase:
    - Log in to your Supabase account at https://app.supabase.io
-   - Go to your project: https://hjhwpeokoztuaifxgfky.supabase.co
-   - If you're setting up for the first time, run the SQL commands found in `supabase_schema.sql`
-   - If you encounter "relation already exists" errors, use `update_supabase.sql` instead
-   - If you get "violates row-level security policy" errors, run `fix_rls_policies.sql` to fix the RLS settings
+   - Go to your project: https://hjhwpeokoztuaifxgfky.supabase.co   - If you're setting up for the first time, run the SQL commands found in `supabase_schema.sql`
+   - If you encounter "relation already exists" errors, use `update_supabase.sql` instead  
+   - **PENTING**: Untuk memperbaiki semua masalah termasuk RLS dan autentikasi, jalankan SQL dari file `fix_all_issues.sql` di SQL Editor Supabase
+   - File ini akan:
+     - Mengatur RLS policy untuk tabel users dan appointments
+     - Membuat trigger untuk otomatis menambahkan user ke tabel public.users saat registrasi
+     - Menyinkronkan data pengguna yang sudah ada
    - You can check your table structure with `check_tables.sql` to diagnose any issues
-   - Make sure the test user with ID 'd0e70ba1-0e15-49e0-a7e9-5d26dfdc07d1' exists in the users table
+   
+### Troubleshooting RLS & Auth Issues
+
+Jika Anda mengalami masalah seperti:
+- "PostgresException(message: new row violates row-level security policy for table "users", code: 42501)" saat registrasi
+- "AuthApiException(message: Invalid login credentials, statusCode: 400)" saat login
+- Masalah konfirmasi email yang tidak bisa diakses (link localhost di email)
+
+Ikuti langkah-langkah ini:
+
+1. Sign in ke Supabase Dashboard
+2. Buka SQL Editor
+3. Jalankan script `fix_all_issues.sql` yang memperbaiki:
+   - Kebijakan RLS untuk tabel users dan appointments
+   - Menambahkan trigger database untuk membuat profil user otomatis
+   - Menyinkronkan data pengguna yang sudah ada
+4. Jika mengalami masalah dengan konfirmasi email, jalankan script `fix_email_confirmation.sql` yang:
+   - Menonaktifkan kebutuhan konfirmasi email
+   - Otomatis mengkonfirmasi semua email yang sudah terdaftar
+   - Memperbaiki kebijakan RLS untuk akses data
+5. Coba register dengan email baru
+6. Jika masih ada masalah, pastikan tidak ada konflik kebijakan RLS dengan:
+   - Buka Authentication > Policies di Supabase
+   - Pastikan tabel users memiliki policy untuk INSERT, SELECT, UPDATE dengan kondisi auth.uid() = id
 
 ### Database Schema
 
@@ -76,7 +102,29 @@ The application uses the following tables:
 
 ## Authentication
 
-This version uses a default user ID. In a production app, you would implement:
+The app now includes full authentication functionality:
+
+- User registration with email, password, and name
+- Login with email and password
+- Automatic user profile creation in the `users` table
+- Session management and persistence
+- Logout functionality
+- Profile management
+
+### Authentication Troubleshooting
+
+If you encounter issues with authentication:
+
+1. Make sure you've run the `fix_all_issues.sql` script in Supabase SQL Editor
+2. Check that the `users` table has the correct structure
+3. Verify RLS policies are correctly set up
+4. Refer to the detailed guide in `supabase_auth_guide.md`
+
+For a more secure implementation in production, you would also add:
+- Email verification
+- Password reset functionality
+- Social authentication (Google, Facebook, etc.)
+- Refresh token handling
 - User registration
 - Email/password or social login
 - Secure authentication with Supabase Auth

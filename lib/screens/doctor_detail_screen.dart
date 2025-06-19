@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:projek_ambw/services/supabase_service.dart';
+import 'package:projek_ambw/services/auth_service.dart';
 
 class DoctorDetailScreen extends StatefulWidget {
   final Doctor doctor;
@@ -19,8 +20,8 @@ class DoctorDetailScreen extends StatefulWidget {
 }
 
 class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
-  // Use a valid UUID for our test user
-  final String userId = 'd0e70ba1-0e15-49e0-a7e9-5d26dfdc07d1'; // Test user ID
+  // Get current user ID from AuthService
+  String get userId => AuthService.currentUser?.id ?? '';
   
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime;

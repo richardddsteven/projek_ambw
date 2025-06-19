@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projek_ambw/models/appointment.dart';
 import 'package:projek_ambw/services/supabase_service.dart';
+import 'package:projek_ambw/services/auth_service.dart';
 import 'package:projek_ambw/utils/app_theme.dart';
 import 'package:projek_ambw/widgets/appointment_card.dart';
 
@@ -13,8 +14,8 @@ class AppointmentsScreen extends StatefulWidget {
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // Use a valid UUID for our test user
-  final String userId = 'd0e70ba1-0e15-49e0-a7e9-5d26dfdc07d1'; // Test user ID
+  // Get current user ID from AuthService
+  String get userId => AuthService.currentUser?.id ?? '';
   late Future<List<Appointment>> _appointmentsFuture;
   
   @override

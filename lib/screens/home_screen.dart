@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:projek_ambw/models/appointment.dart';
 import 'package:projek_ambw/models/doctor.dart';
 import 'package:projek_ambw/services/supabase_service.dart';
+import 'package:projek_ambw/services/auth_service.dart';
 import 'package:projek_ambw/utils/app_theme.dart';
 import 'package:projek_ambw/widgets/appointment_card.dart';
 import 'package:projek_ambw/widgets/doctor_card.dart';
@@ -9,6 +10,7 @@ import 'package:projek_ambw/widgets/specialty_card.dart';
 import 'package:projek_ambw/screens/doctor_list_screen.dart';
 import 'package:projek_ambw/screens/doctor_detail_screen.dart';
 import 'package:projek_ambw/screens/appointments_screen.dart';
+import 'package:projek_ambw/screens/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -18,8 +20,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Use a valid UUID for our test user
-  final String userId = 'd0e70ba1-0e15-49e0-a7e9-5d26dfdc07d1'; // Test user ID
+  // Get current user ID from AuthService
+  String get userId => AuthService.currentUser?.id ?? '';
   late Future<List<Doctor>> _doctorsFuture;
   late Future<List<Appointment>> _appointmentsFuture;
 
@@ -91,10 +93,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return [];
     }
   }
-
   @override
   Widget build(BuildContext context) {
-    final userName = 'Siyam Ahamed'; // Replace with actual user name
+    final userName = AuthService.currentUser?.name ?? 'User';
     
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -132,42 +133,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     Row(
                       children: [
-                        const CircleAvatar(
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.notifications_outlined,
-                            color: AppColors.textPrimary,
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.logout),
+                          tooltip: 'Logout',
+                          onPressed: () async {
+                            await _showLogoutDialog(context);
+                          },
                         ),
                         const SizedBox(width: 8),
-                        CircleAvatar(
-                          backgroundImage: const NetworkImage('https://randomuser.me/api/portraits/men/32.jpg'),
-                          radius: 20,
-                          child: Align(
-                            alignment: Alignment.bottomRight,
-                            child: Container(
-                              height: 12,
-                              width: 12,
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 1.5,
-                                ),
+                        GestureDetector(
+                          onTap: () {
+                            _showProfileOptions(context);
+                          },
+                          child: CircleAvatar(
+                            backgroundColor: AppColors.primaryColor.withOpacity(0.2),
+                            child: Text(
+                              userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                              style: TextStyle(
+                                color: AppColors.primaryColor,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: const Center(
-                                child: Text(
-                                  'PRO',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 4,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                            ),                          ),
                         ),
                       ],
                     ),
@@ -460,6 +446,92 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await AuthService.signOut();
+                if (!mounted) return;
+                
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showProfileOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Profile Options',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('View Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to profile screen
+                  // We could add a profile screen here in the future
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to edit profile screen
+                  // We could add an edit profile screen here in the future
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout, color: AppColors.errorColor),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(color: AppColors.errorColor),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showLogoutDialog(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
