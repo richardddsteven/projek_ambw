@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/material.dart'; // Add this for TimeOfDay
 
 class SupabaseService {
   static final SupabaseClient _client = Supabase.instance.client;
@@ -84,5 +85,67 @@ class SupabaseService {
   
   static Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
     await _client.from('users').update(data).eq('id', userId);
+  }
+
+  // Check if a doctor is already booked at a specific time
+  static Future<bool> isDoctorBooked({
+    required String doctorId, 
+    required DateTime appointmentDate
+  }) async {
+    try {
+      // Create time range with 1 hour buffer (appointment duration)
+      final startTime = appointmentDate.subtract(const Duration(minutes: 59));
+      final endTime = appointmentDate.add(const Duration(minutes: 59));
+      
+      // Query for existing appointments for this doctor in the time window
+      final response = await _client
+          .from('appointments')
+          .select('id')
+          .eq('doctor_id', doctorId)
+          .gte('appointment_date', startTime.toIso8601String())
+          .lte('appointment_date', endTime.toIso8601String())
+          .neq('status', 'cancelled')
+          .limit(1);
+      
+      // If we get any results, the doctor is already booked
+      return response.isNotEmpty;
+    } catch (e) {
+      print('Error checking doctor availability: $e');
+      return false; // Default to allowing booking if check fails
+    }
+  }
+
+  // Get unavailable time slots for a doctor on a specific date
+  static Future<List<TimeOfDay>> getUnavailableTimeSlots({
+    required String doctorId,
+    required DateTime date,
+    required List<TimeOfDay> allTimeSlots
+  }) async {
+    try {
+      // Strip the time component to get just the date
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      
+      // Get all appointments for this doctor on this day
+      final response = await _client
+          .from('appointments')
+          .select('appointment_date')
+          .eq('doctor_id', doctorId)
+          .gte('appointment_date', startOfDay.toIso8601String())
+          .lt('appointment_date', endOfDay.toIso8601String())
+          .neq('status', 'cancelled');
+      
+      // Convert the appointment times to TimeOfDay objects
+      List<TimeOfDay> bookedSlots = [];
+      for (var appointment in response) {
+        final appointmentTime = DateTime.parse(appointment['appointment_date']);
+        bookedSlots.add(TimeOfDay(hour: appointmentTime.hour, minute: appointmentTime.minute));
+      }
+      
+      return bookedSlots;
+    } catch (e) {
+      print('Error getting unavailable time slots: $e');
+      return []; // Return empty list if check fails
+    }
   }
 }

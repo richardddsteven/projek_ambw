@@ -25,7 +25,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime;
-  final List<TimeOfDay> _availableTimes = [
+  final List<TimeOfDay> _allTimeSlots = [
     const TimeOfDay(hour: 9, minute: 0),
     const TimeOfDay(hour: 10, minute: 0),
     const TimeOfDay(hour: 11, minute: 0),
@@ -33,8 +33,39 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     const TimeOfDay(hour: 15, minute: 0),
     const TimeOfDay(hour: 16, minute: 0),
   ];
-  
+  List<TimeOfDay> _bookedTimeSlots = [];
   bool _isLoading = false;
+  bool _isLoadingTimeSlots = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadBookedTimeSlots();
+  }
+  
+  Future<void> _loadBookedTimeSlots() async {
+    setState(() {
+      _isLoadingTimeSlots = true;
+    });
+    
+    try {
+      final bookedSlots = await SupabaseService.getUnavailableTimeSlots(
+        doctorId: widget.doctor.id,
+        date: _selectedDate,
+        allTimeSlots: _allTimeSlots,
+      );
+      
+      setState(() {
+        _bookedTimeSlots = bookedSlots;
+        _isLoadingTimeSlots = false;
+      });
+    } catch (e) {
+      print('Error loading booked time slots: $e');
+      setState(() {
+        _isLoadingTimeSlots = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,11 +101,26 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.8),
                 shape: BoxShape.circle,
-              ),              child: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(Icons.arrow_back, size: 24),
+                  ),
+                ),
               ),
             ),
           ),
@@ -165,6 +211,8 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           _selectedDate = selectedDay;
                           _selectedTime = null;
                         });
+                        // Reload booked time slots for the new date
+                        _loadBookedTimeSlots();
                       },
                       calendarStyle: CalendarStyle(
                         selectedDecoration: BoxDecoration(
@@ -201,32 +249,66 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
+                    _isLoadingTimeSlots
+                    ? const Center(child: CircularProgressIndicator())
+                    : Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: _availableTimes.map((time) {
+                      children: _allTimeSlots.map((time) {
                         final isSelected = _selectedTime == time;
+                        final isBooked = _isTimeSlotBooked(time);
+                        
+                        // Determine colors based on status
+                        final backgroundColor = isSelected 
+                          ? AppColors.primaryColor 
+                          : isBooked 
+                              ? Colors.red[100] 
+                              : Colors.white;
+                              
+                        final textColor = isSelected 
+                          ? Colors.white 
+                          : isBooked 
+                              ? Colors.red[700] 
+                              : Colors.grey[700];
+                              
+                        final borderColor = isSelected 
+                          ? AppColors.primaryColor 
+                          : isBooked 
+                              ? Colors.red[300]! 
+                              : Colors.grey[300]!;
+                        
                         return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedTime = time;
-                            });
-                          },
+                          onTap: isBooked 
+                            ? null  // Disable tap for booked slots
+                            : () {
+                                setState(() {
+                                  _selectedTime = time;
+                                });
+                              },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primaryColor : Colors.white,
+                              color: backgroundColor,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isSelected ? AppColors.primaryColor : Colors.grey[300]!,
+                                color: borderColor,
                               ),
                             ),
-                            child: Text(
-                              '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.grey[700],
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                                if (isBooked)
+                                  const SizedBox(width: 4),
+                                if (isBooked)
+                                  Icon(Icons.block, size: 14, color: Colors.red[700])
+                              ],
                             ),
                           ),
                         );
@@ -236,7 +318,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                     
                     // Book button
                     ElevatedButton(
-                      onPressed: _selectedTime == null
+                      onPressed: (_selectedTime == null || _isTimeSlotBooked(_selectedTime!))
                           ? null
                           : () => _bookAppointment(),
                       style: ElevatedButton.styleFrom(
@@ -298,7 +380,16 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     );
   }
   
-  void _bookAppointment() async {
+  // Check if a time slot is already booked
+  bool _isTimeSlotBooked(TimeOfDay time) {
+    for (var bookedTime in _bookedTimeSlots) {
+      if (bookedTime.hour == time.hour && bookedTime.minute == time.minute) {
+        return true;
+      }
+    }
+    return false;
+  }
+    void _bookAppointment() async {
     if (_selectedTime == null) return;
     
     setState(() {
@@ -314,6 +405,39 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         _selectedTime!.hour,
         _selectedTime!.minute,
       );
+      
+      // Double-check if the slot is available
+      final isBooked = await SupabaseService.isDoctorBooked(
+        doctorId: widget.doctor.id,
+        appointmentDate: appointmentDate
+      );
+      
+      if (isBooked) {
+        // Show error that the slot is no longer available
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Time Slot Not Available'),
+              content: const Text('Sorry, this time slot has just been booked by someone else. Please select another time.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _loadBookedTimeSlots(); // Reload time slots
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
       
       final appointmentType = '${widget.doctor.specialty} Consultation';
       
