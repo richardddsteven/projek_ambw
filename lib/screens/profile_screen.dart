@@ -144,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const SizedBox(height: 32),
+                              SizedBox(height: width > 900 ? 280 : (width > 600 ? 150 : 120)),
                               // Avatar & Name
                               Center(
                                 child: Column(
@@ -175,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 40),
                               // Card: Info Ringkas
                               Card(
                                 margin: const EdgeInsets.symmetric(vertical: 8),
@@ -274,65 +274,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 duration: const Duration(milliseconds: 300),
                 opacity: _showBottomNavBar ? 1 : 0,
                 child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: width > 1000 ? 800 : (width > 600 ? 600 : 400),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(32),
-                      child: Container(
-                        width: double.infinity,
-                        height: 64,
-                        margin: EdgeInsets.only(bottom: width > 600 ? 32 : 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 18,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: BottomNavigationBar(
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          type: BottomNavigationBarType.fixed,
-                          selectedItemColor: AppColors.primaryColor,
-                          unselectedItemColor: Colors.grey[400],
-                          showSelectedLabels: true,
-                          showUnselectedLabels: false,
-                          currentIndex: 2,
-                          items: const [
-                            BottomNavigationBarItem(
-                              icon: Icon(Icons.home),
-                              label: 'Home',
-                            ),
-                            BottomNavigationBarItem(
-                              icon: Icon(Icons.medical_services_outlined),
-                              label: 'Doctors',
-                            ),
-                            BottomNavigationBarItem(
-                              icon: Icon(Icons.person_outline),
-                              label: 'Profile',
-                            ),
-                          ],
-                          onTap: (index) {
-                            if (index == 0) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const HomeScreen()),
-                                (route) => false,
-                              );
-                            } else if (index == 1) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const DoctorListScreen()),
-                                (route) => false,
-                              );
-                            }
-                            // index == 2 is current (Profile)
-                          },
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: width > 1000 ? 800 : (width > 600 ? 600 : 400),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(32),
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 18,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: BottomNavigationBar(
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            type: BottomNavigationBarType.fixed,
+                            selectedItemColor: AppColors.primaryColor,
+                            unselectedItemColor: Colors.grey[400],
+                            showSelectedLabels: true,
+                            showUnselectedLabels: false,
+                            currentIndex: 2,
+                            items: const [
+                              BottomNavigationBarItem(
+                                icon: Icon(Icons.home),
+                                label: 'Home',
+                              ),
+                              BottomNavigationBarItem(
+                                icon: Icon(Icons.medical_services_outlined),
+                                label: 'Doctors',
+                              ),
+                              BottomNavigationBarItem(
+                                icon: Icon(Icons.person_outline),
+                                label: 'Profile',
+                              ),
+                            ],
+                            onTap: (index) {
+                              if (index == 0) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                                  (route) => false,
+                                );
+                              } else if (index == 1) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const DoctorListScreen()),
+                                  (route) => false,
+                                );
+                              }
+                              // index == 2 is current (Profile)
+                            },
+                          ),
                         ),
                       ),
                     ),
