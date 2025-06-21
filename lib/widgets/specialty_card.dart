@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:projek_ambw/utils/app_theme.dart';
 
 class SpecialtyCard extends StatelessWidget {
   final String title;
-  final String iconPath;
+  final String iconPath; // tetap gunakan nama ini untuk kompatibilitas
   final Color backgroundColor;
   final VoidCallback onTap;
 
@@ -17,6 +18,7 @@ class SpecialtyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isNetwork = iconPath.startsWith('http');
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -38,47 +40,50 @@ class SpecialtyCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              height: 50,
-              width: 50,
+              height: (32) * 1.6,
+              width: (32) * 1.6,
               decoration: BoxDecoration(
                 color: backgroundColor,
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Image.asset(
-                  iconPath,
-                  width: 28,
-                  height: 28,
-                  color: backgroundColor == AppColors.neurologistColor
-                      ? Colors.red[300]
-                      : backgroundColor == AppColors.cardiologistColor
-                          ? Colors.blue[300]
-                          : backgroundColor == AppColors.orthopedistColor
-                              ? Colors.orange[300]
-                              : Colors.purple[300],
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      title == 'Neurologist'
-                          ? Icons.psychology
-                          : title == 'Cardiologist'
-                              ? Icons.favorite
-                              : title == 'Orthopedist'
-                                  ? Icons.wheelchair_pickup
-                                  : Icons.healing,
-                      size: 24,
-                      color: backgroundColor == AppColors.neurologistColor
-                          ? Colors.red[300]
-                          : backgroundColor == AppColors.cardiologistColor
-                              ? Colors.blue[300]
-                              : backgroundColor == AppColors.orthopedistColor
-                                  ? Colors.orange[300]
-                                  : Colors.purple[300],
-                    );
-                  },
-                ),
+                child: isNetwork
+                    ? Image.network(
+                        iconPath,
+                        width: 28,
+                        height: 28,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 28),
+                      )
+                    : Builder(
+                        builder: (context) {
+                          if (iconPath.endsWith('.svg')) {
+                            return SvgPicture.asset(
+                              iconPath,
+                              width: 28,
+                              height: 28,
+                              color: null,
+                              placeholderBuilder: (context) => const SizedBox.shrink(),
+                            );
+                          } else {
+                            return Image.asset(
+                              iconPath,
+                              width: 28,
+                              height: 28,
+                              color: null,
+                              errorBuilder: (context, error, stackTrace) {
+                                return SvgPicture.asset(
+                                  'assets/icons/heart.svg',
+                                  width: 28,
+                                  height: 28,
+                                );
+                              },
+                            );
+                          }
+                        },
+                      ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               title,
               textAlign: TextAlign.center,

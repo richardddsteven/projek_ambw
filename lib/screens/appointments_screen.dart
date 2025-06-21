@@ -3,7 +3,6 @@ import 'package:projek_ambw/models/appointment.dart';
 import 'package:projek_ambw/services/supabase_service.dart';
 import 'package:projek_ambw/services/auth_service.dart';
 import 'package:projek_ambw/utils/app_theme.dart';
-import 'package:projek_ambw/widgets/appointment_card.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({Key? key}) : super(key: key);
@@ -86,15 +85,101 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
       });
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment cancelled successfully')),
+        // Floating green notification at the top for success
+        OverlayEntry? overlayEntry;
+        overlayEntry = OverlayEntry(
+          builder: (context) => Positioned(
+            top: 40,
+            left: 24,
+            right: 24,
+            child: Material(
+              color: Colors.transparent,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.green[600],
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.check_circle, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Appointment cancelled successfully!',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
+        Overlay.of(context, rootOverlay: true).insert(overlayEntry);
+        Future.delayed(const Duration(seconds: 2), () {
+          overlayEntry?.remove();
+        });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to cancel appointment: $e')),
+        // Floating red notification at the top for error
+        OverlayEntry? overlayEntry;
+        overlayEntry = OverlayEntry(
+          builder: (context) => Positioned(
+            top: 40,
+            left: 24,
+            right: 24,
+            child: Material(
+              color: Colors.transparent,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.red[700],
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.error, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Failed to cancel appointment!',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
+        Overlay.of(context, rootOverlay: true).insert(overlayEntry);
+        Future.delayed(const Duration(seconds: 2), () {
+          overlayEntry?.remove();
+        });
       }
     }
   }
@@ -145,14 +230,31 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(
-            child: Text('Error: ${snapshot.error}'),
+            child: Text('Error: snapshot.error}'),
           );
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
-            child: Text('No appointments found'),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_busy, size: 60, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'No ${isUpcoming ? 'upcoming' : 'past'} appointments',
+                  style: TextStyle(fontSize: 18, color: Colors.grey[500], fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isUpcoming
+                      ? 'You have no scheduled appointments.'
+                      : 'No appointment history found.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                ),
+              ],
+            ),
           );
         }
-        
+
         final now = DateTime.now();
         final appointments = snapshot.data!
             .where((appointment) {
@@ -160,31 +262,135 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
               return isUpcoming ? isInFuture && appointment.status != 'cancelled' : !isInFuture || appointment.status == 'cancelled';
             })
             .toList()
-          ..sort((a, b) => 
-              isUpcoming 
+          ..sort((a, b) =>
+              isUpcoming
                   ? a.appointmentDate.compareTo(b.appointmentDate)
                   : b.appointmentDate.compareTo(a.appointmentDate)
           );
-        
+
         if (appointments.isEmpty) {
           return Center(
-            child: Text('No ${isUpcoming ? 'upcoming' : 'past'} appointments'),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_busy, size: 60, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'No ${isUpcoming ? 'upcoming' : 'past'} appointments',
+                  style: TextStyle(fontSize: 18, color: Colors.grey[500], fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
           );
         }
-        
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           itemCount: appointments.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 18),
           itemBuilder: (context, index) {
             final appointment = appointments[index];
-            return AppointmentCard(
-              appointment: appointment,
-              onTap: () {
-                // Could navigate to appointment details screen
-              },
-              onCancel: isUpcoming && appointment.status != 'cancelled'
-                  ? () => _showCancelConfirmationDialog(appointment)
-                  : null,
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryColor.withOpacity(0.07),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                border: Border.all(
+                  color: appointment.status == 'cancelled'
+                      ? Colors.red[100]!
+                      : AppColors.primaryColor.withOpacity(0.08),
+                  width: 1.2,
+                ),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                leading: CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppColors.primaryColor.withOpacity(0.13),
+                  backgroundImage: NetworkImage(appointment.doctor.photoUrl),
+                ),
+                title: Text(
+                  'Dr. ${appointment.doctor.name}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.medical_services, size: 16, color: AppColors.primaryColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          appointment.doctor.specialty,
+                          style: TextStyle(fontSize: 13, color: AppColors.primaryColor, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 15, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${appointment.appointmentDate.day.toString().padLeft(2, '0')}-${appointment.appointmentDate.month.toString().padLeft(2, '0')}-${appointment.appointmentDate.year}',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(Icons.access_time, size: 15, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${appointment.appointmentDate.hour.toString().padLeft(2, '0')}:${appointment.appointmentDate.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 15, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          appointment.status == 'cancelled'
+                              ? 'Cancelled'
+                              : appointment.status == 'completed'
+                                  ? 'Completed'
+                                  : 'Scheduled',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: appointment.status == 'cancelled'
+                                ? Colors.red[400]
+                                : appointment.status == 'completed'
+                                    ? Colors.green[600]
+                                    : AppColors.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                trailing: isUpcoming && appointment.status != 'cancelled'
+                    ? IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.red, size: 26),
+                        tooltip: 'Cancel Appointment',
+                        onPressed: () => _showCancelConfirmationDialog(appointment),
+                      )
+                    : null,
+                onTap: () {
+                  // TODO: Show appointment details dialog/page if needed
+                },
+              ),
             );
           },
         );

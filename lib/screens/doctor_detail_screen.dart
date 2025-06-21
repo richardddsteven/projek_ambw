@@ -93,38 +93,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             ),
           ),
           
-          // Back button
-          Positioned(
-            top: 40,
-            left: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Icon(Icons.arrow_back, size: 24),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
           // Doctor details
           SingleChildScrollView(
             padding: const EdgeInsets.only(top: 220),
@@ -342,6 +310,37 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               ),
             ),
           ),
+          // Back button (moved to last so it's always on top)
+          Positioned(
+            top: 40,
+            left: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.8),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(Icons.arrow_back, size: 24),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -460,11 +459,58 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             title: const Text('Success'),
             content: Text(
               'Your appointment with Dr. ${widget.doctor.name} has been booked for ${DateFormat('EEEE, MMM d').format(_selectedDate)} at ${_selectedTime!.format(context)}.',
-            ),            actions: [
+            ),
+            actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to previous screen
+                  Navigator.pop(context, true); // Go back to previous screen, trigger refresh
+                  // Show custom floating notification at the top
+                  OverlayEntry? overlayEntry;
+                  overlayEntry = OverlayEntry(
+                    builder: (context) => Positioned(
+                      top: 40,
+                      left: 24,
+                      right: 24,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.green[600],
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.check_circle, color: Colors.white, size: 28),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Appointment booked successfully!',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                  Overlay.of(context, rootOverlay: true)?.insert(overlayEntry);
+                  Future.delayed(const Duration(seconds: 2), () {
+                    overlayEntry?.remove();
+                  });
                 },
                 child: const Text('OK'),
               ),
@@ -495,7 +541,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text('Error details: ${e.toString()}'),
+                Text('Error details:  ￼e.toString()}'),
                 const SizedBox(height: 12),
                 if (isRLSError)
                   const Text(
@@ -511,7 +557,55 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Show custom floating error notification at the top
+                  OverlayEntry? overlayEntry;
+                  overlayEntry = OverlayEntry(
+                    builder: (context) => Positioned(
+                      top: 40,
+                      left: 24,
+                      right: 24,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red[700],
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.error, color: Colors.white, size: 28),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Failed to book appointment!',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                  Overlay.of(context, rootOverlay: true)?.insert(overlayEntry);
+                  Future.delayed(const Duration(seconds: 2), () {
+                    overlayEntry?.remove();
+                  });
+                },
                 child: const Text('OK'),
               ),
             ],

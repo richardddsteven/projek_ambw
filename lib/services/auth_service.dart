@@ -32,13 +32,21 @@ class AuthService {
     required String email, 
     required String password,
     required String name,
+    int? noHp, // no_hp sekarang int
+    String? gender, // gender varchar
+    DateTime? tanggalLahir, // tanggal_lahir date
   }) async {
     try {
       // Sign up the user with Supabase Auth
       final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name},
+        data: {
+          'name': name,
+          'no_hp': noHp,
+          'gender': gender,
+          'tanggal_lahir': tanggalLahir != null ? tanggalLahir.toIso8601String().split('T')[0] : null,
+        },
         emailRedirectTo: null, // Prevent email confirmation redirect
       );
       
@@ -61,6 +69,9 @@ class AuthService {
             'id': response.user!.id,
             'email': email,
             'name': name,
+            'no_hp': noHp,
+            'gender': gender,
+            'tanggal_lahir': tanggalLahir != null ? tanggalLahir.toIso8601String().split('T')[0] : null,
           });
         } catch (insertError) {
           debugPrint('Error inserting user into users table: $insertError');
@@ -71,6 +82,9 @@ class AuthService {
           id: response.user!.id,
           email: email,
           name: name,
+          noHp: noHp,
+          gender: gender,
+          tanggalLahir: tanggalLahir,
         );
         
         return _currentUser;
@@ -98,20 +112,37 @@ class AuthService {
           _currentUser = await _getUserProfile(response.user!.id);
         } catch (e) {
           debugPrint('Error getting user profile: $e');
-          
           // If profile doesn't exist, create one
+          int? parsedNoHp;
+          final rawNoHp = response.user!.userMetadata?['no_hp'];
+          if (rawNoHp is int) {
+            parsedNoHp = rawNoHp;
+          } else if (rawNoHp is String) {
+            parsedNoHp = int.tryParse(rawNoHp);
+          }
           try {
             await _client.from('users').insert({
               'id': response.user!.id,
               'email': email,
               'name': response.user!.userMetadata?['name'] ?? email.split('@').first,
+              'no_hp': parsedNoHp,
+              'gender': response.user!.userMetadata?['gender'],
+              'tanggal_lahir': response.user!.userMetadata?['tanggal_lahir'],
             });
-            
             // Create AppUser object
             _currentUser = AppUser(
               id: response.user!.id,
               email: email,
               name: response.user!.userMetadata?['name'] ?? email.split('@').first,
+              noHp: parsedNoHp,
+              gender: response.user!.userMetadata?['gender'],
+              tanggalLahir: (() {
+                final tgl = response.user!.userMetadata?['tanggal_lahir'];
+                if (tgl != null && tgl.toString().isNotEmpty) {
+                  return DateTime.tryParse(tgl);
+                }
+                return null;
+              })(),
             );
           } catch (insertError) {
             debugPrint('Error creating user profile: $insertError');
@@ -120,6 +151,15 @@ class AuthService {
               id: response.user!.id,
               email: email,
               name: response.user!.userMetadata?['name'] ?? email.split('@').first,
+              noHp: parsedNoHp,
+              gender: response.user!.userMetadata?['gender'],
+              tanggalLahir: (() {
+                final tgl = response.user!.userMetadata?['tanggal_lahir'];
+                if (tgl != null && tgl.toString().isNotEmpty) {
+                  return DateTime.tryParse(tgl);
+                }
+                return null;
+              })(),
             );
           }
         }
@@ -159,10 +199,20 @@ class AuthService {
       // If user doesn't have a profile yet, create one
       final user = _client.auth.currentUser;
       if (user != null) {
+        int? noHp;
+        final rawNoHp = user.userMetadata?['no_hp'];
+        if (rawNoHp is int) {
+          noHp = rawNoHp;
+        } else if (rawNoHp is String) {
+          noHp = int.tryParse(rawNoHp);
+        }
         final data = {
           'id': user.id,
           'email': user.email,
           'name': user.userMetadata?['name'] ?? user.email?.split('@').first,
+          'no_hp': noHp,
+          'gender': user.userMetadata?['gender'],
+          'tanggal_lahir': user.userMetadata?['tanggal_lahir'],
         };
         
         // Try to create user profile
@@ -184,35 +234,54 @@ class AuthService {
     await _client.auth.resetPasswordForEmail(email);
   }
 
-  // Update user profile
+  // Update user profile (tambahan gender, tanggalLahir, email)
   static Future<AppUser?> updateUserProfile({
     String? name,
     String? photoUrl,
+    int? noHp,
+    String? gender,
+    DateTime? tanggalLahir,
+    String? email,
   }) async {
     if (_currentUser == null) return null;
-    
     try {
       final updates = <String, dynamic>{};
-      
       if (name != null) updates['name'] = name;
       if (photoUrl != null) updates['photo_url'] = photoUrl;
-      
+      if (noHp != null) updates['no_hp'] = noHp;
+      if (gender != null) updates['gender'] = gender;
+      if (tanggalLahir != null) updates['tanggal_lahir'] = tanggalLahir.toIso8601String().split('T')[0];
+      if (email != null && email != _currentUser!.email) updates['email'] = email;
       if (updates.isNotEmpty) {
-        await _client
-            .from('users')
-            .update(updates)
-            .eq('id', _currentUser!.id);
-        
+        await _client.from('users').update(updates).eq('id', _currentUser!.id);
         _currentUser = AppUser(
           id: _currentUser!.id,
-          email: _currentUser!.email,
+          email: email ?? _currentUser!.email,
           name: name ?? _currentUser!.name,
           photoUrl: photoUrl ?? _currentUser!.photoUrl,
+          noHp: noHp ?? _currentUser!.noHp,
+          gender: gender ?? _currentUser!.gender,
+          tanggalLahir: tanggalLahir ?? _currentUser!.tanggalLahir,
         );
       }
-      
       return _currentUser;
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete account
+  static Future<void> deleteAccount(BuildContext context) async {
+    if (_currentUser == null) return;
+    try {
+      // Hapus dari tabel users
+      await _client.from('users').delete().eq('id', _currentUser!.id);
+      // Sign out user
+      await signOut();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menghapus akun: ${e.toString()}')),
+      );
       rethrow;
     }
   }
