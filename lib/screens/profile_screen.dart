@@ -130,6 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final screenHeight = constraints.maxHeight;
                 return SingleChildScrollView(
                   controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: screenHeight,
@@ -144,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              SizedBox(height: width > 900 ? 280 : (width > 600 ? 150 : 120)),
+                              SizedBox(height: width > 1100 ? 60 : (width > 900 ? 100 : (width > 600 ? 80 : 40))),
                               // Avatar & Name
                               Center(
                                 child: Column(
@@ -152,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     CircleAvatar(
                                       radius: width > 900 ? 56 : (width > 600 ? 48 : 44),
                                       backgroundColor: AppColors.primaryColor.withOpacity(0.15),
-                                      backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
+                                      // backgroundImage: _pickedImage != null ? FileImage(_pickedImage!) : (user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null),
                                       child: user?.photoUrl == null
                                           ? Text(
                                               (user?.name?.isNotEmpty ?? false) ? user!.name![0].toUpperCase() : 'U',
@@ -483,7 +484,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Batal', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -536,7 +537,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Batal', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(width: 16),

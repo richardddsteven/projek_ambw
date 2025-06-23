@@ -288,7 +288,118 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                     ElevatedButton(
                       onPressed: (_selectedTime == null || _isTimeSlotBooked(_selectedTime!))
                           ? null
-                          : () => _bookAppointment(),
+                          : () async {
+                              // Tampilkan dialog konfirmasi sebelum booking
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    title: Row(
+                                      children: [
+                                        const Icon(Icons.event_available, color: AppColors.primaryColor),
+                                        const SizedBox(width: 8),
+                                        const Text('Confirm Booking'),
+                                      ],
+                                    ),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              backgroundImage: CachedNetworkImageProvider(widget.doctor.photoUrl),
+                                              radius: 22,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('Dr. ${widget.doctor.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                  Text(widget.doctor.specialty, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.calendar_today, size: 18, color: AppColors.primaryColor),
+                                            const SizedBox(width: 6),
+                                            Text(DateFormat('EEEE, MMM d, yyyy').format(_selectedDate)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.access_time, size: 18, color: AppColors.primaryColor),
+                                            const SizedBox(width: 6),
+                                            Text(_selectedTime != null ? _selectedTime!.format(context) : '-'),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange[50],
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: Colors.orange.shade200),
+                                          ),
+                                          child: Row(
+                                            children: const [
+                                              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 22),
+                                              SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'Please make sure the date and time are correct.',
+                                                  style: TextStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.w500),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    actions: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red[600],
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                              ),
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.primaryColor,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                              ),
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Confirm'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                              if (confirmed == true) {
+                                _bookAppointment();
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         disabledBackgroundColor: Colors.grey[300],
                         textStyle: const TextStyle(
@@ -507,7 +618,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                       ),
                     ),
                   );
-                  Overlay.of(context, rootOverlay: true)?.insert(overlayEntry);
+                  Overlay.of(context, rootOverlay: true).insert(overlayEntry);
                   Future.delayed(const Duration(seconds: 2), () {
                     overlayEntry?.remove();
                   });
@@ -601,7 +712,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                       ),
                     ),
                   );
-                  Overlay.of(context, rootOverlay: true)?.insert(overlayEntry);
+                  Overlay.of(context, rootOverlay: true).insert(overlayEntry);
                   Future.delayed(const Duration(seconds: 2), () {
                     overlayEntry?.remove();
                   });
